@@ -1,4 +1,6 @@
-from cogs.variables import Piece, Player
+from copy import deepcopy
+from math import copysign
+from cogs.variables import MoveState, Piece, Player
 
 
 class Game:
@@ -16,7 +18,7 @@ class Game:
         board[9][3] = board[9][6] = board[6][0] = board[6][9] = Piece.white_amazon
         return board
 
-    def is_over(self, player: int):
+    def is_over(self, player: Player):
         lf = Piece.white_amazon
         if player == Player.black:
             Piece.black_amazon
@@ -48,13 +50,87 @@ class Game:
             }
         )
 
-    def move(self, player_id: int, move_from, move_to):
+    def move(self, player_id: int, move_from, move_to, arrow_to):
+        """Handles the movement of a piece and its arrow
+        """
+        if self.finished:
+            return MoveState.rejected, "This game is already over"
         if player_id not in [self.player_white, self.player_black]:
-            return False, "Not an active player"
+            return MoveState.rejected, "Not an active player"
+
+        # to determine what pieces should be used
         current_allowed = self.player_white
+        own_piece = Piece.white_amazon
+        own_arrow = Piece.white_arrow
         if self.current_player == Player.black:
             current_allowed = self.player_black
-        if player_id != current_allowed:
-            return False, "Not the player's turn"
+            own_piece = Piece.black_amazon
+            own_arrow = Piece.white_arrow
 
-        return True, "Move accepted"
+        if player_id != current_allowed:
+            return MoveState.rejected, "Not the player's turn"
+
+        x1, y1 = move_from
+        x2, y2 = move_to
+        x3, y3 = arrow_to
+        # check if the move_from is an own piece
+        if self.board[y1][x1] != own_piece:
+            return MoveState.rejected, "Not a valid piece to move. (Remember **x y**, not y x)"
+
+        # check if moving the amazon is valid
+        if not self._is_valid_move(self.board, move_from, move_to):
+            return MoveState.rejected, "Can't move the amazon that way"
+        # moves the amazon (without saving yet)
+        tmp_board = deepcopy(self.board)
+        tmp_board[y1][x1] = Piece.nothing
+        tmp_board[y2][x2] = own_piece
+
+        # check if shooting the arrow is valid
+        if not self._is_valid_move(tmp_board, move_to, arrow_to):
+            return MoveState.rejected, "Can't shoot the arrow like that"
+
+        # move the piece on the board and shoot the arrow (with saving)
+        self.board[y1][x1] = Piece.nothing
+        self.board[y2][x2] = own_piece
+        self.board[y3][x3] = own_arrow
+
+        if self.current_player == Player.white:
+            self.current_player = Player.black
+        else:
+            self.current_player = Player.white
+
+        # check if the game is over
+        if self.is_over(self.current_player):
+            self.finished = True
+            return MoveState.game_over, "Game Over"
+
+        return MoveState.accepted, "Move accepted"
+
+    def _is_valid_move(board, move_from, move_to):
+        """Checks if a move is valid with the current board configuration
+        """
+        x1, y1 = move_from
+        x2, y2 = move_to
+        if x1 == x2 and y1 == y2:
+            return False
+        if x1 == x2:  # check along the horizontal
+            for i in range(min(y1, y2)+1, max(y1, y2)+1):
+                if board[i][x1] != Piece.nothing:
+                    return False
+            return True
+        if y1 == y2:  # check along the vertical
+            for i in range(min(x1, x2)+1, max(x1, x2)+1):
+                if board[y1][i] != Piece.nothing:
+                    return False
+            return True
+
+        # checks along the diagonals
+        diff = x2 - x1
+        if y2 - y1 != diff:  # check if diagonal coordinates are diagonal
+            return False
+
+        sign = copysign(1, diff)
+        for i in range(1, abs(diff)):
+            if board[y1+sign][x1+sign] != Piece.nothing:
+                return False
+        return True

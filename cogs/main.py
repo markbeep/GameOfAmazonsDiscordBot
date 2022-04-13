@@ -1,8 +1,11 @@
 from random import Random
+from typing import Type
 import discord
 from discord.ext import commands
+from matplotlib.pyplot import arrow
 
 from cogs.game import Game
+from cogs.variables import MoveState
 
 
 class Main(commands.Cog):
@@ -24,22 +27,28 @@ class Main(commands.Cog):
                 return
 
             request_type = splitted[1].lower().strip()
-            try:
-                if request_type == "get":
+            if request_type == "get":
+                try:
                     await self._get(msg, *splitted[2:])
-                    return
-                if request_type == "start":
+                except TypeError:
+                    await msg.reply(embed=discord.Embed(description="Invalid `get` format:\n`@mention|get|game_id`"))
+                return
+            if request_type == "start":
+                try:
                     await self._start(msg, *splitted[2:])
-                    return
-                if request_type == "play":
+                except TypeError:
+                    await msg.reply(embed=discord.Embed(description="Invalid `start` format:\n`@mention|start|enemy_user_id`"))
+                return
+            if request_type == "play":
+                try:
                     await self._play(msg, *splitted[2:])
-            except TypeError as e:
-                await msg.reply(f"Invalid format received: {e.args}")
+                except TypeError:
+                    await msg.reply(embed=discord.Embed(description="Invalid `play` format:\n`@mention|play|game_id|move_from|move_to|arrow_to`"))
+                return
 
     async def _get(self, msg: discord.Message, game_id):
         if game_id is None:
-            await msg.reply("No game id given")
-            return
+            raise TypeError
         try:
             game_id = int(game_id)
         except ValueError:
@@ -53,8 +62,7 @@ class Main(commands.Cog):
 
     async def _start(self, msg: discord.Message, enemy_id):
         if enemy_id is None:
-            await msg.reply("No enemy player given")
-            return
+            raise TypeError
         try:
             enemy_id = int(enemy_id.replace("<", "").replace(
                 ">", "").replace("!", "").replace("@", ""))
@@ -65,16 +73,9 @@ class Main(commands.Cog):
         self.games.append(new_game)
         await msg.reply(new_game.format())
 
-    async def _play(self, msg: discord.Message, game_id, move_from, move_to):
-        if game_id is None:
-            await msg.reply("No game id given")
-            return
-        if move_from is None:
-            await msg.reply("No move from given")
-            return
-        if move_to is None:
-            await msg.reply("No move to given")
-            return
+    async def _play(self, msg: discord.Message, game_id, move_from, move_to, arrow_to):
+        if game_id is None or move_from is None or move_to is None or arrow_to is None:
+            raise TypeError
         try:
             game_id = int(game_id)
         except ValueError:
@@ -84,8 +85,27 @@ class Main(commands.Cog):
         if game is None:
             await msg.reply("No game with that id going on right now")
             return
-        valid, reason = game.move(msg.author.id, move_from, move_to)
-        if not valid:
+
+        # turns a coordinate format [y,x] / (y,x) / y,x into coords
+        async def coord(loc):
+            to_remove = ["[", "]", "(", ")", "{", "}"]
+            for c in to_remove:
+                loc = loc.replace(c, "")
+            loc = loc.split(",")
+            loc = [int(loc[0]), int(loc[1])]
+            return loc
+
+        try:
+            valid, reason = game.move(
+                msg.author.id,
+                await coord(move_from),
+                await coord(move_to),
+                await coord(arrow_to))
+        except (ValueError, IndexError):
+            await msg.reply("Invalid coordinates given")
+            return
+
+        if valid == MoveState.rejected:
             await msg.reply(reason)
             return
         await msg.reply("Move accepted")
