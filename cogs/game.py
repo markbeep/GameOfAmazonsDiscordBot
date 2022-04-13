@@ -126,6 +126,11 @@ class Game:
 
         return MoveState.accepted, "Move accepted"
 
+    def get_current_player_id(self):
+        if self.current_player == Player.black:
+            return self.player_black
+        return self.player_white
+
 
 def _is_valid_move(board, move_from, move_to):
     """Checks if a move is valid with the current board configuration

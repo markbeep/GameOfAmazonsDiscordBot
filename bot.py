@@ -7,8 +7,14 @@ config = get_config()
 
 bot = commands.Bot(command_prefix=config.prefixes)
 
+# removes the help command
+bot.remove_command("help")
+
 print("Loading main extension:\t", end="", flush=True)
 bot.load_extension("cogs.main")
+print("DONE")
+print("Loading help extension:\t", end="", flush=True)
+bot.load_extension("cogs.help")
 print("DONE")
 
 

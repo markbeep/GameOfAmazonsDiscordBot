@@ -31,7 +31,6 @@ class Main(commands.Cog):
         if msg.content.replace("!", "").startswith(f"<@{self.bot.user.id}>"):
             splitted = msg.content.split("|")  # we split by |
             if len(splitted) < 2:
-                await msg.reply("Not enough arguments given")
                 return
 
             request_type = splitted[1].lower().strip()
@@ -50,7 +49,7 @@ class Main(commands.Cog):
             if request_type == "play":
                 try:
                     await self._play(msg, *splitted[2:])
-                except AttributeError:
+                except TypeError:
                     await msg.reply(embed=discord.Embed(description="Invalid `play` format:\n`@mention|play|game_id|move_from|move_to|arrow_to`"))
                 return
 
@@ -116,7 +115,8 @@ class Main(commands.Cog):
         if valid == MoveState.rejected:
             await msg.reply(reason)
             return
-        await msg.reply("Move accepted")
+
+        await msg.reply(f"{game.get_current_player_id()}|**Your Turn!**|{game.json_format()}")
 
     def _find_game(self, game_id) -> Game:
         res = [x for x in self.games if x.id == game_id]
