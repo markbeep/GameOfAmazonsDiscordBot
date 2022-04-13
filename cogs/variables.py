@@ -9,9 +9,8 @@ class Player(Enum):
 class Piece(Enum):
     nothing = 0
     white_amazon = 1
-    white_arrow = 2
-    black_amazon = 3
-    black_arrow = 4
+    black_amazon = 2
+    arrow = 3
 
 
 class MoveState(Enum):

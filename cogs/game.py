@@ -51,18 +51,15 @@ class Game:
         )
 
     def format(self):
-        # ⬛⬜🟠🔸🔵 🔹 🟨🟧 ▫️▪️
         chessboard = [
             ["🟨" if (i+j) % 2 == 0 else "🟧" for j in range(10)] for i in range(10)]
         for i in range(10):
             for j in range(10):
                 if self.board[i][j] == Piece.black_amazon:
                     chessboard[i][j] = "⬛"
-                if self.board[i][j] == Piece.black_arrow:
-                    chessboard[i][j] = "▪️"
                 if self.board[i][j] == Piece.white_amazon:
                     chessboard[i][j] = "⬜"
-                if self.board[i][j] == Piece.white_arrow:
+                if self.board[i][j] == Piece.arrow:
                     chessboard[i][j] = "▫️"
 
         return "\n".join(["".join(row) for row in chessboard])
@@ -78,11 +75,9 @@ class Game:
         # to determine what pieces should be used
         current_allowed = self.player_white
         own_piece = Piece.white_amazon
-        own_arrow = Piece.white_arrow
         if self.current_player == Player.black:
             current_allowed = self.player_black
             own_piece = Piece.black_amazon
-            own_arrow = Piece.black_arrow
 
         if player_id != current_allowed:
             return MoveState.rejected, "Not the player's turn"
@@ -112,7 +107,7 @@ class Game:
         # move the piece on the board and shoot the arrow (with saving)
         self.board[y1][x1] = Piece.nothing
         self.board[y2][x2] = own_piece
-        self.board[y3][x3] = own_arrow
+        self.board[y3][x3] = Piece.arrow
 
         if self.current_player == Player.white:
             self.current_player = Player.black
