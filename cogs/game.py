@@ -39,7 +39,7 @@ class Game:
                     return True
         return False
 
-    def format(self):
+    def json_format(self):
         board = [[x.value for x in row] for row in self.board]
         return str(
             {
@@ -49,6 +49,23 @@ class Game:
                 "playerBlack": self.player_black
             }
         )
+
+    def format(self):
+        # ⬛⬜🟠🔸🔵 🔹 🟨🟧 ▫️▪️
+        chessboard = [
+            ["🟨" if (i+j) % 2 == 0 else "🟧" for j in range(10)] for i in range(10)]
+        for i in range(10):
+            for j in range(10):
+                if self.board[i][j] == Piece.black_amazon:
+                    chessboard[i][j] = "⬛"
+                if self.board[i][j] == Piece.black_arrow:
+                    chessboard[i][j] = "▪️"
+                if self.board[i][j] == Piece.white_amazon:
+                    chessboard[i][j] = "⬜"
+                if self.board[i][j] == Piece.white_arrow:
+                    chessboard[i][j] = "▫️"
+
+        return "\n".join(["".join(row) for row in chessboard])
 
     def move(self, player_id: int, move_from, move_to, arrow_to):
         """Handles the movement of a piece and its arrow
@@ -65,7 +82,7 @@ class Game:
         if self.current_player == Player.black:
             current_allowed = self.player_black
             own_piece = Piece.black_amazon
-            own_arrow = Piece.white_arrow
+            own_arrow = Piece.black_arrow
 
         if player_id != current_allowed:
             return MoveState.rejected, "Not the player's turn"
@@ -75,10 +92,11 @@ class Game:
         x3, y3 = arrow_to
         # check if the move_from is an own piece
         if self.board[y1][x1] != own_piece:
-            return MoveState.rejected, "Not a valid piece to move. (Remember **x y**, not y x)"
+            return MoveState.rejected, "Not your own piece to move. (Remember **x y**, not y x)"
 
         # check if moving the amazon is valid
-        if not self._is_valid_move(self.board, move_from, move_to):
+        valid, reason = _is_valid_move(self.board, move_from, move_to)
+        if not valid:
             return MoveState.rejected, "Can't move the amazon that way"
         # moves the amazon (without saving yet)
         tmp_board = deepcopy(self.board)
@@ -86,7 +104,9 @@ class Game:
         tmp_board[y2][x2] = own_piece
 
         # check if shooting the arrow is valid
-        if not self._is_valid_move(tmp_board, move_to, arrow_to):
+        valid, reason = _is_valid_move(tmp_board, move_to, arrow_to)
+        if not valid:
+            print(reason)
             return MoveState.rejected, "Can't shoot the arrow like that"
 
         # move the piece on the board and shoot the arrow (with saving)
@@ -106,31 +126,37 @@ class Game:
 
         return MoveState.accepted, "Move accepted"
 
-    def _is_valid_move(board, move_from, move_to):
-        """Checks if a move is valid with the current board configuration
-        """
-        x1, y1 = move_from
-        x2, y2 = move_to
-        if x1 == x2 and y1 == y2:
-            return False
-        if x1 == x2:  # check along the horizontal
-            for i in range(min(y1, y2)+1, max(y1, y2)+1):
-                if board[i][x1] != Piece.nothing:
-                    return False
-            return True
-        if y1 == y2:  # check along the vertical
-            for i in range(min(x1, x2)+1, max(x1, x2)+1):
-                if board[y1][i] != Piece.nothing:
-                    return False
-            return True
 
-        # checks along the diagonals
-        diff = x2 - x1
-        if y2 - y1 != diff:  # check if diagonal coordinates are diagonal
-            return False
+def _is_valid_move(board, move_from, move_to):
+    """Checks if a move is valid with the current board configuration
+    """
+    x1, y1 = move_from
+    x2, y2 = move_to
+    if x1 == x2 and y1 == y2:
+        return False, "x and y are the same"
+    if x1 == x2:  # check along the vertical
+        diff = y2-y1
+        sign = int(copysign(1, diff))
+        for i in range(1, abs(diff)+1):
+            if board[y1+i*sign][x1] != Piece.nothing:
+                return False, f"vert: something in the way on {(x1,y1+i*sign)}"
+        return True, "correct"
+    if y1 == y2:  # check along the horizontal
+        diff = x2-x1
+        sign = int(copysign(1, diff))
+        for i in range(1, abs(diff)+1):
+            if board[y1][x1+i*sign] != Piece.nothing:
+                return False, f"horiz: something in the way on {(x1+i*sign,y1)}"
+        return True, "correct"
 
-        sign = copysign(1, diff)
-        for i in range(1, abs(diff)):
-            if board[y1+sign][x1+sign] != Piece.nothing:
-                return False
-        return True
+    # checks along the diagonals
+    diff = x2 - x1
+    if abs(y2 - y1) != abs(diff):  # check if diagonal coordinates are diagonal
+        return False, "not a valid diagonal movement"
+
+    signx = int(copysign(1, diff))
+    signy = int(copysign(1, y2-y1))
+    for i in range(1, abs(diff)+1):
+        if board[y1+i*signy][x1+i*signx] != Piece.nothing:
+            return False, f"diag: something in the way on {(x1+i*signx, y1+i*signy)}"
+    return True, "correct"

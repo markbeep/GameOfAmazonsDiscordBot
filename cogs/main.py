@@ -1,8 +1,6 @@
 from random import Random
-from typing import Type
 import discord
 from discord.ext import commands
-from matplotlib.pyplot import arrow
 
 from cogs.game import Game
 from cogs.variables import MoveState
@@ -17,9 +15,19 @@ class Main(commands.Cog):
     async def on_ready(self):
         print("DONE")
 
+    @commands.command()
+    async def view(self, ctx, game_id: int = -1):
+        if game_id == -1:
+            await ctx.reply("No game id given")
+            return
+        game = self._find_game(game_id)
+        if game_id is None:
+            await ctx.reply("No game with that id")
+            return
+        await ctx.reply(game.format())
+
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
-        print(msg.content)
         if msg.content.replace("!", "").startswith(f"<@{self.bot.user.id}>"):
             splitted = msg.content.split("|")  # we split by |
             if len(splitted) < 2:
@@ -42,7 +50,7 @@ class Main(commands.Cog):
             if request_type == "play":
                 try:
                     await self._play(msg, *splitted[2:])
-                except TypeError:
+                except AttributeError:
                     await msg.reply(embed=discord.Embed(description="Invalid `play` format:\n`@mention|play|game_id|move_from|move_to|arrow_to`"))
                 return
 
@@ -58,7 +66,7 @@ class Main(commands.Cog):
         if game is None:
             await msg.reply("Currently no game with that id")
             return
-        await msg.reply(game.format())
+        await msg.reply(game.json_format())
 
     async def _start(self, msg: discord.Message, enemy_id):
         if enemy_id is None:
@@ -71,7 +79,7 @@ class Main(commands.Cog):
             return
         new_game = Game(self._find_random_id(), msg.author.id, enemy_id)
         self.games.append(new_game)
-        await msg.reply(new_game.format())
+        await msg.reply(new_game.json_format())
 
     async def _play(self, msg: discord.Message, game_id, move_from, move_to, arrow_to):
         if game_id is None or move_from is None or move_to is None or arrow_to is None:

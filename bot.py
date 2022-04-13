@@ -1,8 +1,6 @@
-import discord
 from discord.ext import commands
 from util.file import create_files
 from util.json import get_config
-import os
 
 create_files()
 config = get_config()
