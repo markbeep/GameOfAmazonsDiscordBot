@@ -54,6 +54,7 @@ class Main(commands.Cog):
                 return
 
     async def _get(self, msg: discord.Message, game_id):
+        """Replies with the current game board in a JSON format"""
         if game_id is None:
             raise TypeError
         try:
@@ -68,6 +69,7 @@ class Main(commands.Cog):
         await msg.reply(game.json_format())
 
     async def _start(self, msg: discord.Message, enemy_id):
+        """Starts a new game against a specific enemy"""
         if enemy_id is None:
             raise TypeError
         try:
@@ -81,6 +83,7 @@ class Main(commands.Cog):
         await msg.reply(new_game.json_format())
 
     async def _play(self, msg: discord.Message, game_id, move_from, move_to, arrow_to):
+        """Moves an amazona from one place to another and shoots an arrow"""
         if game_id is None or move_from is None or move_to is None or arrow_to is None:
             raise TypeError
         try:
@@ -108,23 +111,41 @@ class Main(commands.Cog):
                 await coord(move_from),
                 await coord(move_to),
                 await coord(arrow_to))
-        except (ValueError, IndexError):
+        except ValueError:
             await msg.reply("Invalid coordinates given")
+            return
+        except IndexError:
+            await msg.reply("There was an error parsing the coordinates")
             return
 
         if valid == MoveState.rejected:
             await msg.reply(reason)
             return
 
+        if valid == MoveState.game_over:
+            await msg.reply("Game is over. You won!")
+            # removes the game from current ongoing ones
+            self.games = list(filter(lambda x: x.id != game.id, self.games))
+            return
+
+        if game.get_current_player_id() == self.bot.user.id:
+            # makes the AI play if it's the opponent
+            # this also automatically swaps back to have it be the other
+            # player's turn again
+            game.play_ai(self.bot.user.id)
+
         await msg.reply(f"{game.get_current_player_id()}|**Your Turn!**|{game.json_format()}")
 
     def _find_game(self, game_id) -> Game:
+        """Using the game ID it finds a matching game in the current ongoing game"""
         res = [x for x in self.games if x.id == game_id]
         if len(res) > 0:
             return res[0]
         return None
 
     def _find_random_id(self):
+        """Generates a random 3 digit ID which isn't taken yet.
+        This method isn't thread safe though, but I'm just hoping it never comes to that"""
         # finds a random free id
         rand = Random()
         while True:
