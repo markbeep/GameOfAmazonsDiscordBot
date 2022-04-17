@@ -33,7 +33,11 @@ class Game:
         # checks if a piece can move
         for i in range(-1, 2):
             for j in range(-1, 2):
-                if i == y and j == x:
+                if i == 0 and j == 0:
+                    continue
+                if y+i < 0 or x+j < 0:
+                    continue
+                if y+i >= len(self.board) or x+j >= len(self.board):
                     continue
                 if self.board[y+i][x+j] == Piece.nothing:
                     return True
