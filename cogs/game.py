@@ -21,7 +21,7 @@ class Game:
     def is_over(self, player: Player):
         lf = Piece.white_amazon
         if player == Player.black:
-            Piece.black_amazon
+            lf = Piece.black_amazon
 
         for y, row in enumerate(self.board):
             for x, piece in enumerate(row):
