@@ -183,7 +183,7 @@ def _is_valid_move(board, move_from, move_to):
         signy = int(copysign(1, y2-y1))
         if y2-y1 == 0:
             signy = 0
-        for i in range(1, abs(x2-x1)+1):
+        for i in range(1, max(abs(y2-y1), abs(x2-x1))+1):
             if board[y1+i*signy][x1+i*signx] != Piece.nothing:
                 return False, f"diag: something in the way on {(x1+i*signx, y1+i*signy)}"
         return True, "correct"
