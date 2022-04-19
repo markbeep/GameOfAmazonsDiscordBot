@@ -21,10 +21,21 @@ class Main(commands.Cog):
             await ctx.reply("No game id given")
             return
         game = self._find_game(game_id)
-        if game_id is None:
+        if game is None:
             await ctx.reply("No game with that id")
             return
         await ctx.reply(game.format())
+    
+    @commands.command()
+    async def resend(self, ctx, game_id: int = -1):
+        if game_id == -1:
+            await ctx.reply("No game id given")
+            return
+        game = self._find_game(game_id)
+        if game_id is None:
+            await ctx.reply("No game with that id")
+            return
+        await ctx.reply(f"{game.get_current_player_id()}|**Your Turn!**|{game.json_format()}")
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
@@ -53,7 +64,7 @@ class Main(commands.Cog):
                     await msg.reply(embed=discord.Embed(description="Invalid `play` format:\n`@mention|play|game_id|move_from|move_to|arrow_to`"))
                 return
 
-    async def _get(self, msg: discord.Message, game_id):
+    async def _get(self, msg: discord.Message, game_id, *args):
         """Replies with the current game board in a JSON format"""
         if game_id is None:
             raise TypeError
@@ -68,7 +79,7 @@ class Main(commands.Cog):
             return
         await msg.reply(game.json_format())
 
-    async def _start(self, msg: discord.Message, enemy_id):
+    async def _start(self, msg: discord.Message, enemy_id, *args):
         """Starts a new game against a specific enemy"""
         if enemy_id is None:
             raise TypeError
@@ -80,9 +91,9 @@ class Main(commands.Cog):
             return
         new_game = Game(self._find_random_id(), msg.author.id, enemy_id)
         self.games.append(new_game)
-        await msg.reply(new_game.json_format())
+        await msg.reply(f"{msg.author.id}|**Your turn!**|{new_game.json_format()}")
 
-    async def _play(self, msg: discord.Message, game_id, move_from, move_to, arrow_to):
+    async def _play(self, msg: discord.Message, game_id, move_from, move_to, arrow_to, *args):
         """Moves an amazona from one place to another and shoots an arrow"""
         if game_id is None or move_from is None or move_to is None or arrow_to is None:
             raise TypeError
@@ -123,7 +134,7 @@ class Main(commands.Cog):
             return
 
         if valid == MoveState.game_over:
-            await msg.reply("Game is over. You won!")
+            await msg.reply(f"Game is over. You won!\n{game.format()}")
             # removes the game from current ongoing ones
             self.games = list(filter(lambda x: x.id != game.id, self.games))
             return
@@ -133,6 +144,11 @@ class Main(commands.Cog):
             # this also automatically swaps back to have it be the other
             # player's turn again
             game.play_ai(self.bot.user.id)
+            if game.is_over(game.current_player):
+                await msg.reply(f"Game is over. You lost :(\n{game.format()}")
+                # removes the game from current ongoing ones
+                self.games = list(filter(lambda x: x.id != game.id, self.games))
+                return
 
         await msg.reply(f"{game.get_current_player_id()}|**Your Turn!**|{game.json_format()}")
 

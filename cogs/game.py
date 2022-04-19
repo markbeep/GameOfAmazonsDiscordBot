@@ -2,6 +2,7 @@ from copy import deepcopy
 from math import copysign
 from cogs.variables import MoveState, Piece, Player
 from random import Random
+import json
 
 
 class Game:
@@ -53,28 +54,31 @@ class Game:
 
     def json_format(self):
         board = [[x.value for x in row] for row in self.board]
-        return str(
+        return json.dumps(
             {
                 "id": self.id,
                 "board": board,
                 "playerWhite": self.player_white,
-                "playerBlack": self.player_black
+                "playerBlack": self.player_black,
+                "turn": self.current_player.value
             }
         )
 
     def format(self):
+        # ⬜⬛🟧🟨🔵
         chessboard = [
-            ["🟨" if (i+j) % 2 == 0 else "🟧" for j in range(10)] for i in range(10)]
+            ["⬛" if (i+j) % 2 == 0 else "⬛" for j in range(10)] for i in range(10)]
         for i in range(10):
             for j in range(10):
                 if self.board[i][j] == Piece.black_amazon:
-                    chessboard[i][j] = "⬛"
+                    chessboard[i][j] = "🟧"
                 if self.board[i][j] == Piece.white_amazon:
-                    chessboard[i][j] = "⬜"
+                    chessboard[i][j] = "🟨"
                 if self.board[i][j] == Piece.arrow:
-                    chessboard[i][j] = "▫️"
+                    chessboard[i][j] = "🔵"
 
-        return "\n".join(["".join(row) for row in chessboard])
+        board = "\n".join(["".join(row) for row in chessboard])
+        return f"```\n{board}```"
 
     def move(self, player_id: int, move_from, move_to, arrow_to):
         """Handles the movement of a piece and its arrow"""
@@ -147,19 +151,19 @@ class Game:
 
         # finds the movements a random piece can make
         rand = Random()
-        x, y = move_from = rand.choice(potential_pieces)
-        potential_direction = self._find_possible_move(x, y)
+        x_old, y_old = move_from = rand.choice(potential_pieces)
+        potential_direction = self._find_possible_move(x_old, y_old)
         x, y = move_to = rand.choice(potential_direction)
 
         # copies the board to find a random arrow place
         tmp_board = deepcopy(self.board)
-        tmp_board[y][x] = Piece.nothing
+        tmp_board[y_old][x_old] = Piece.nothing
         tmp_board[y][x] = own
 
         potential_arrow = self._find_possible_move(x, y, tmp_board)
         arrow_to = rand.choice(potential_arrow)
 
-        # moves the piece
+        # moves the piece (amd swaps the players)
         self.move(bot_id, move_from, move_to, arrow_to)
 
     def get_current_player_id(self):
