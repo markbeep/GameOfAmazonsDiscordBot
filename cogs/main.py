@@ -26,13 +26,13 @@ class Main(commands.Cog):
             return
         await ctx.reply(game.format())
     
-    @commands.command()
+    @commands.command(aliases=["get"])
     async def resend(self, ctx, game_id: int = -1):
         if game_id == -1:
             await ctx.reply("No game id given")
             return
         game = self._find_game(game_id)
-        if game_id is None:
+        if game is None:
             await ctx.reply("No game with that id")
             return
         await ctx.reply(f"{game.get_current_player_id()}|**Your Turn!**|{game.json_format()}")
@@ -40,7 +40,7 @@ class Main(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
         if msg.content.replace("!", "").startswith(f"<@{self.bot.user.id}>"):
-            splitted = msg.content.split("|")  # we split by |
+            splitted = msg.content.split(" ")  # we split by space chars
             if len(splitted) < 2:
                 return
 
@@ -49,19 +49,19 @@ class Main(commands.Cog):
                 try:
                     await self._get(msg, *splitted[2:])
                 except TypeError:
-                    await msg.reply(embed=discord.Embed(description="Invalid `get` format:\n`@mention|get|game_id`"))
+                    await msg.reply(embed=discord.Embed(description="Invalid `get` format:\n`@mention get <game_id>`"))
                 return
             if request_type == "start":
                 try:
                     await self._start(msg, *splitted[2:])
                 except TypeError:
-                    await msg.reply(embed=discord.Embed(description="Invalid `start` format:\n`@mention|start|enemy_user_id`"))
+                    await msg.reply(embed=discord.Embed(description="Invalid `start` format:\n`@mention start <enemy_user_id>`"))
                 return
             if request_type == "play":
                 try:
                     await self._play(msg, *splitted[2:])
                 except TypeError:
-                    await msg.reply(embed=discord.Embed(description="Invalid `play` format:\n`@mention|play|game_id|move_from|move_to|arrow_to`"))
+                    await msg.reply(embed=discord.Embed(description="Invalid `play` format:\n`@mention play <game_id> <move_from> <move_to> <arrow_to>`"))
                 return
 
     async def _get(self, msg: discord.Message, game_id, *args):

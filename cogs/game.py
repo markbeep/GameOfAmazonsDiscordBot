@@ -65,20 +65,27 @@ class Game:
         )
 
     def format(self):
-        # ⬜⬛🟧🟨🔵
+        # ⬛ 🔳 🌚 🌝
+        number_emotes = [
+            "<:0_:1014519634013212842>", "<:1_:1014519632482287686>", "<:2_:1014519631085572148>",
+            "<:3_:1014519629252665376>", "<:4_:1014519628212473866>", "<:5_:1014519626773831720>",
+            "<:6_:1014519625419083826>", "<:7_:1014519623678439556>", "<:8_:1014519622680203434>", "<:9_:1014519621371572234>"
+        ]
         chessboard = [
-            ["⬛" if (i+j) % 2 == 0 else "⬛" for j in range(10)] for i in range(10)]
+            ["⬛" for j in range(11)] for i in range(11)]
         for i in range(10):
+            chessboard[i+1][0] = number_emotes[i]
+            chessboard[0][i+1] = number_emotes[i]
             for j in range(10):
                 if self.board[i][j] == Piece.black_amazon:
-                    chessboard[i][j] = "🟧"
+                    chessboard[i+1][j+1] = "🌚"
                 if self.board[i][j] == Piece.white_amazon:
-                    chessboard[i][j] = "🟨"
+                    chessboard[i+1][j+1] = "🌝"
                 if self.board[i][j] == Piece.arrow:
-                    chessboard[i][j] = "🔵"
+                    chessboard[i+1][j+1] = "🔳"
 
         board = "\n".join(["".join(row) for row in chessboard])
-        return f"```\n{board}```"
+        return f"{board}"
 
     def move(self, player_id: int, move_from, move_to, arrow_to):
         """Handles the movement of a piece and its arrow"""
